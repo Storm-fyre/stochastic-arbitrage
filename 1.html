@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POLYMARKET // 5-MIN ARB TERMINAL</title>
+    <style>
+        :root {
+            --bg-color: #050b14;
+            --panel-bg: #0a1325;
+            --neon-cyan: #00f0ff;
+            --neon-green: #39ff14;
+            --neon-red: #ff003c;
+            --neon-yellow: #ffde00;
+            --text-main: #a9b7c6;
+            --text-dim: #5c6a7a;
+            --font-mono: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-mono);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* --- Header & Clocks --- */
+        header {
+            border-bottom: 2px solid var(--neon-cyan);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(90deg, #050b14 0%, #0a1325 100%);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .title {
+            color: var(--neon-cyan);
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-shadow: 0 0 5px var(--neon-cyan);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .clocks {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9rem;
+            color: var(--neon-yellow);
+            border-left: 1px solid #1f2d40;
+            padding-left: 20px;
+        }
+
+        .clock-box {
+            background: #000;
+            padding: 4px 10px;
+            border: 1px solid #1f2d40;
+            border-radius: 3px;
+        }
+
+        .pulse {
+            width: 10px;
+            height: 10px;
+            background-color: var(--neon-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--neon-green);
+            animation: pulse 1.5s infinite;
+        }
+
+        .pulse.waiting {
+            background-color: var(--neon-yellow);
+            box-shadow: 0 0 10px var(--neon-yellow);
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+
+        .btn {
+            background: transparent;
+            color: var(--neon-cyan);
+            border: 1px solid var(--neon-cyan);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: var(--neon-cyan);
+            color: var(--bg-color);
+            box-shadow: 0 0 10px var(--neon-cyan);
+        }
+
+        /* --- Main Content --- */
+        .container {
+            display: flex;
+            flex: 1;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .dashboard {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid #1f2d40;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .panel-title {
+            color: #fff;
+            margin-top: 0;
+            border-bottom: 1px dashed #1f2d40;
+            padding-bottom: 10px;
+            font-size: 1rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* --- Active Market --- */
+        .market-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .market-info { font-size: 1.2rem; color: #fff;}
+        .timer { font-size: 1.5rem; color: var(--neon-yellow); text-shadow: 0 0 5px var(--neon-yellow); }
+        
+        .price-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .bar-container {
+            width: 100%;
+            background-color: #000;
+            height: 35px;
+            border: 1px solid #1f2d40;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .bar-yes { background-color: var(--neon-green); opacity: 0.7;}
+        .bar-no { background-color: var(--neon-red); opacity: 0.7;}
+
+        .bar-label {
+            position: absolute;
+            top: 8px;
+            left: 10px;
+            color: #fff;
+            font-weight: bold;
+            z-index: 2;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .start-price {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            font-weight: normal;
+        }
+
+        .target-line {
+            position: absolute;
+            left: 42%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #fff;
+            box-shadow: 0 0 5px #fff;
+            z-index: 3;
+        }
+        .target-text {
+            position: absolute;
+            left: 42%;
+            top: -20px;
+            font-size: 0.7rem;
+            transform: translateX(-50%);
+            color: #fff;
+        }
+
+        .status-indicators {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .status-box {
+            padding: 10px;
+            border: 1px solid #1f2d40;
+            width: 45%;
+            text-align: center;
+        }
+        .filled { border-color: var(--neon-green); color: var(--neon-green); text-shadow: 0 0 5px var(--neon-green); }
+
+        /* --- Stats Board --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .stat-box {
+            background: #000;
+            border: 1px solid #1f2d40;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-val { font-size: 1.5rem; color: var(--neon-cyan); margin-top: 5px; }
+
+        /* --- Terminal Log --- */
+        .terminal {
+            flex: 1;
+            background-color: #000;
+            border: 1px solid #1f2d40;
+            padding: 15px;
+            overflow-y: auto;
+            max-height: calc(100vh - 120px);
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        .log-entry { margin-bottom: 5px; border-bottom: 1px solid #111; padding-bottom: 3px;}
+        .log-time { color: #555; margin-right: 10px; }
+        .log-event { color: var(--text-main); }
+        .log-fill { color: var(--neon-green); }
+        .log-win { color: var(--neon-cyan); }
+        .log-loss { color: var(--neon-red); }
+        .log-wait { color: var(--neon-yellow); }
+
+        /* --- Slide Menu (History) --- */
+        #history-menu {
+            position: fixed;
+            top: 0;
+            right: -450px;
+            width: 400px;
+            height: 100vh;
+            background-color: rgba(5, 11, 20, 0.95);
+            backdrop-filter: blur(5px);
+            border-left: 2px solid var(--neon-cyan);
+            transition: right 0.4s ease;
+            z-index: 1000;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        #history-menu.open { right: 0; }
+        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: var(--neon-cyan); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 30px; font-size: 0.85rem;}
+        th, td { border: 1px solid #1f2d40; padding: 8px; text-align: left; }
+        th { color: var(--neon-cyan); }
+        .profit-pos { color: var(--neon-green); }
+        .profit-neg { color: var(--neon-red); }
+
+        .overlay-waiting {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .overlay-waiting.hidden { display: none; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-left">
+            <div class="title">
+                <div class="pulse" id="status-pulse"></div>
+                POLYMARKET // 5-MIN BTC ARB TERMINAL
+            </div>
+            <div class="clocks">
+                <div class="clock-box" id="clock-et">ET: --:--:--</div>
+                <div class="clock-box" id="clock-ist">IST: --:--:--</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 15px;">
+            <button class="btn" onclick="clearData()">Clear Data</button>
+            <button class="btn" onclick="toggleMenu()">[+] Data Logs</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Dashboard Left -->
+        <div class="dashboard">
+            <!-- Active Market Panel -->
+            <div class="panel">
+                <div id="wait-overlay" class="overlay-waiting">
+                    <h2 style="color: var(--neon-yellow); margin-bottom: 5px;">[ WAITING PHASE ]</h2>
+                    <p style="color: var(--text-dim);">Discarding partial candle. Syncing to next exact 5-min boundary...</p>
+                    <div class="timer" id="overlay-timer" style="margin-top: 10px;">00:00</div>
+                </div>
+
+                <div class="panel-title">
+                    <span>LIVE MARKET TRACKER</span>
+                    <span>TARGET: LIMIT $0.42</span>
+                </div>
+                
+                <div class="market-header">
+                    <div class="market-info" id="market-name">Awaiting Sync...</div>
+                    <div class="timer" id="market-timer">00:00</div>
+                </div>
+                
+                <div class="price-bars">
+                    <div style="position: relative;">
+                        <div class="target-text">0.42 BUY LIMIT</div>
+                        <div class="bar-container">
+                            <div class="target-line"></div>
+                            <div class="bar-fill bar-yes" id="bar-yes" style="width: 50%;"></div>
+                            <div class="bar-label">
+                                <span>YES: $<span id="lbl-yes">0.50</span></span>
+                                <span class="start-price">(Start: $<span id="start-yes">0.50</span>)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bar-container">
+                        <div class="target-line"></div>
+                        <div class="bar-fill bar-no" id="bar-no" style="width: 50%;"></div>
+                        <div class="bar-label">
+                            <span>NO: $<span id="lbl-no">0.50</span></span>
+                            <span class="start-price">(Start: $<span id="start-no">0.50</span>)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="status-indicators">
+                    <div class="status-box" id="status-yes">YES LIMIT: PENDING</div>
+                    <div class="status-box" id="status-no">NO LIMIT: PENDING</div>
+                </div>
+            </div>
+
+            <!-- Stats Panel -->
+            <div class="panel">
+                <h3 class="panel-title">PERFORMANCE METRICS</h3>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div>NET PROFIT</div>
+                        <div class="stat-val" id="stat-pnl">$0.00</div>
+                    </div>
+                    <div class="stat-box">
+                        <div>WIN RATE</div>
+                        <div class="stat-val" id="stat-winrate">0%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div>TOTAL TRADES</div>
+                        <div class="stat-val" id="stat-trades">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div>WHIPSAWS CAUGHT</div>
+                        <div class="stat-val" id="stat-whipsaws">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terminal Logs Right -->
+        <div class="terminal" id="terminal-log">
+            <div class="log-entry">
+                <span class="log-time">[SYSTEM]</span>
+                <span class="log-event">Terminal Initialized. Setting up time sync protocols...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Slide Menu -->
+    <div id="history-menu">
+        <div class="close-btn" onclick="toggleMenu()">×</div>
+        <h3 class="panel-title" style="color: var(--neon-cyan);">HISTORICAL LEDGER</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Result</th>
+                    <th>Fills</th>
+                    <th>PnL</th>
+                </tr>
+            </thead>
+            <tbody id="history-table-body">
+                <!-- Data injected via JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        /* ==============================================================
+           5-MIN BITCOIN ARBITRAGE SIMULATOR LOGIC
+           ============================================================== */
+
+        let state = {
+            status: 'WAITING', // WAITING or ACTIVE
+            marketId: 0,
+            nextBoundaryTime: 0,
+            
+            // Prices
+            yesPrice: 0.50,
+            noPrice: 0.50,
+            startYesPrice: 0.50,
+            startNoPrice: 0.50,
+            
+            // Fills
+            yesFilled: false,
+            noFilled: false,
+            targetPrice: 0.42
+        };
+
+        let stats = {
+            netPnl: 0.0,
+            totalTrades: 0,
+            wins: 0, 
+            whipsaws: 0
+        };
+
+        let historyLogs =[];
+
+        // UI Elements
+        const elYesBar = document.getElementById('bar-yes');
+        const elNoBar = document.getElementById('bar-no');
+        const elYesLbl = document.getElementById('lbl-yes');
+        const elNoLbl = document.getElementById('lbl-no');
+        const elStartYes = document.getElementById('start-yes');
+        const elStartNo = document.getElementById('start-no');
+        
+        const elYesStatus = document.getElementById('status-yes');
+        const elNoStatus = document.getElementById('status-no');
+        const elTerminal = document.getElementById('terminal-log');
+        const elWaitOverlay = document.getElementById('wait-overlay');
+        const elStatusPulse = document.getElementById('status-pulse');
+
+        // --- Initialization ---
+        function init() {
+            loadData();
+            updateStatsUI();
+            
+            // Find next exact 5-min mark (XX:00, XX:05, XX:10, etc)
+            state.nextBoundaryTime = calculateNextBoundary();
+            
+            logTerminal("Loaded local storage data.");
+            logTerminal(`Discarding partial candle. Waiting for exact 5-min alignment...`, 'log-wait');
+            
+            // Main Loops
+            setInterval(updateClocks, 1000);        // Top Header Clocks
+            setInterval(timeSyncController, 1000);  // Master Time Controller
+            setInterval(simulateMarketTick, 2000);  // Price Engine
+            
+            updateClocks(); // Call once immediately
+            timeSyncController(); 
+        }
+
+        // --- Clocks & Time Management ---
+        function updateClocks() {
+            const now = new Date();
+            
+            const etTime = now.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour12: false });
+            const istTime = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour12: false });
+            
+            document.getElementById('clock-et').innerText = `ET: ${etTime}`;
+            document.getElementById('clock-ist').innerText = `IST: ${istTime}`;
+        }
+
+        function calculateNextBoundary() {
+            const d = new Date();
+            const currentMin = d.getMinutes();
+            const remainder = currentMin % 5;
+            const minsToAdd = 5 - remainder;
+            
+            d.setMinutes(currentMin + minsToAdd);
+            d.setSeconds(0);
+            d.setMilliseconds(0);
+            return d.getTime();
+        }
+
+        function formatTimer(seconds) {
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        // Master controller ensuring we trigger exactly on standard real-world boundaries
+        function timeSyncController() {
+            const now = Date.now();
+            const secondsLeft = Math.ceil((state.nextBoundaryTime - now) / 1000);
+            
+            // Update Displays
+            const timeString = formatTimer(secondsLeft > 0 ? secondsLeft : 0);
+            document.getElementById('market-timer').innerText = timeString;
+            document.getElementById('overlay-timer').innerText = timeString;
+
+            // Trigger Boundary
+            if (now >= state.nextBoundaryTime) {
+                if (state.status === 'ACTIVE') {
+                    resolveMarket();
+                } else {
+                    // Transitioning from WAITING to ACTIVE
+                    elWaitOverlay.classList.add('hidden');
+                    elStatusPulse.classList.remove('waiting');
+                    logTerminal(`Sync achieved. Commencing live strategy.`, 'log-win');
+                }
+                
+                // Advance to the next 5-min mark
+                state.nextBoundaryTime = calculateNextBoundary();
+                startMarketCycle();
+            }
+        }
+
+        // --- Core Market Logic ---
+        function startMarketCycle() {
+            state.status = 'ACTIVE';
+            state.marketId++;
+            
+            // Start the candle exactly at 0.50 (Accurate to new market creations)
+            state.yesPrice = 0.50;
+            state.noPrice = 0.50;
+            
+            // Record exact start prices
+            state.startYesPrice = state.yesPrice;
+            state.startNoPrice = state.noPrice;
+            elStartYes.innerText = state.startYesPrice.toFixed(2);
+            elStartNo.innerText = state.startNoPrice.toFixed(2);
+
+            state.yesFilled = false;
+            state.noFilled = false;
+
+            document.getElementById('market-name').innerText = `BTC 5-MIN CANDLE #` + state.marketId;
+            elYesStatus.className = 'status-box';
+            elYesStatus.innerText = 'YES LIMIT: PENDING';
+            elNoStatus.className = 'status-box';
+            elNoStatus.innerText = 'NO LIMIT: PENDING';
+
+            logTerminal(`Candle #${state.marketId} started. Placing dual $0.42 limit orders.`, 'log-event');
+            updatePriceUI();
+        }
+
+        function simulateMarketTick() {
+            // Price continuously simulates regardless of waiting or active,
+            // to show visual motion behind the overlay.
+            let shift = (Math.random() - 0.5) * 0.15; 
+            if (Math.random() > 0.8) shift *= 2.5; // Volatility spikes
+
+            state.yesPrice = Math.max(0.01, Math.min(0.99, state.yesPrice + shift));
+            state.noPrice = 1.0 - state.yesPrice; 
+
+            updatePriceUI();
+            
+            if (state.status === 'ACTIVE') {
+                checkFills();
+            }
+        }
+
+        function checkFills() {
+            if (!state.yesFilled && state.yesPrice <= state.targetPrice) {
+                state.yesFilled = true;
+                elYesStatus.className = 'status-box filled';
+                elYesStatus.innerText = 'YES LIMIT: FILLED @ $0.42';
+                logTerminal(`YES limit order FILLED at $0.42`, 'log-fill');
+            }
+
+            if (!state.noFilled && state.noPrice <= state.targetPrice) {
+                state.noFilled = true;
+                elNoStatus.className = 'status-box filled';
+                elNoStatus.innerText = 'NO LIMIT: FILLED @ $0.42';
+                logTerminal(`NO limit order FILLED at $0.42`, 'log-fill');
+            }
+        }
+
+        function resolveMarket() {
+            stats.totalTrades++;
+            
+            let winningSide = state.yesPrice > 0.5 ? 'YES' : 'NO';
+            let pnl = 0;
+            let resultType = "";
+
+            // Calculate Math
+            if (state.yesFilled && state.noFilled) {
+                pnl = 0.16;
+                stats.whipsaws++;
+                stats.wins++;
+                resultType = "Whipsaw (Both Filled)";
+                logTerminal(`Candle Resolved. WON WHIPSAW! +$0.16`, 'log-win');
+            } else if (state.yesFilled && winningSide === 'YES') {
+                pnl = 0.58;
+                stats.wins++;
+                resultType = "Lucky Trend (YES)";
+                logTerminal(`Candle Resolved. Lucky Trend YES! +$0.58`, 'log-win');
+            } else if (state.noFilled && winningSide === 'NO') {
+                pnl = 0.58;
+                stats.wins++;
+                resultType = "Lucky Trend (NO)";
+                logTerminal(`Candle Resolved. Lucky Trend NO! +$0.58`, 'log-win');
+            } else if (state.yesFilled || state.noFilled) {
+                pnl = -0.42;
+                resultType = "Mad Bull (Loss)";
+                logTerminal(`Candle Resolved. Steamrolled (Loss). -$0.42`, 'log-loss');
+            } else {
+                pnl = 0.00;
+                resultType = "Dud (No Fills)";
+                logTerminal(`Candle Resolved. No orders filled. PnL: $0.00`, 'log-event');
+            }
+
+            stats.netPnl += pnl;
+
+            // Save History
+            const logEntry = {
+                id: state.marketId,
+                time: new Date().toLocaleTimeString(),
+                result: resultType,
+                fills: (state.yesFilled ? "Y" : "-") + "/" + (state.noFilled ? "N" : "-"),
+                pnl: pnl.toFixed(2)
+            };
+            historyLogs.unshift(logEntry); 
+            
+            saveData();
+            updateStatsUI();
+            updateHistoryUI();
+        }
+
+        // --- UI Updaters ---
+        function updatePriceUI() {
+            elYesBar.style.width = (state.yesPrice * 100) + '%';
+            elNoBar.style.width = (state.noPrice * 100) + '%';
+            
+            elYesLbl.innerText = state.yesPrice.toFixed(2);
+            elNoLbl.innerText = state.noPrice.toFixed(2);
+        }
+
+        function updateStatsUI() {
+            document.getElementById('stat-pnl').innerText = (stats.netPnl >= 0 ? '+$' : '-$') + Math.abs(stats.netPnl).toFixed(2);
+            document.getElementById('stat-pnl').style.color = stats.netPnl >= 0 ? 'var(--neon-green)' : 'var(--neon-red)';
+            
+            document.getElementById('stat-trades').innerText = stats.totalTrades;
+            document.getElementById('stat-whipsaws').innerText = stats.whipsaws;
+            
+            let winRate = stats.totalTrades > 0 ? ((stats.wins / stats.totalTrades) * 100).toFixed(1) : 0;
+            document.getElementById('stat-winrate').innerText = winRate + '%';
+        }
+
+        function updateHistoryUI() {
+            const tbody = document.getElementById('history-table-body');
+            tbody.innerHTML = '';
+            
+            historyLogs.slice(0, 50).forEach(log => {
+                let pnlClass = log.pnl > 0 ? 'profit-pos' : (log.pnl < 0 ? 'profit-neg' : '');
+                let row = `<tr>
+                    <td>${log.time}</td>
+                    <td>${log.result}</td>
+                    <td>${log.fills}</td>
+                    <td class="${pnlClass}">${log.pnl > 0 ? '+' : ''}$${log.pnl}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function logTerminal(message, cssClass = 'log-event') {
+            const time = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            div.innerHTML = `<span class="log-time">[${time}]</span><span class="${cssClass}">${message}</span>`;
+            elTerminal.appendChild(div);
+            elTerminal.scrollTop = elTerminal.scrollHeight; // Auto-scroll down
+        }
+
+        function toggleMenu() {
+            document.getElementById('history-menu').classList.toggle('open');
+        }
+
+        // --- Local Storage Management ---
+        function saveData() {
+            localStorage.setItem('polyStats', JSON.stringify(stats));
+            localStorage.setItem('polyHistory', JSON.stringify(historyLogs.slice(0, 100))); 
+        }
+
+        function loadData() {
+            const savedStats = localStorage.getItem('polyStats');
+            const savedHistory = localStorage.getItem('polyHistory');
+            if (savedStats) stats = JSON.parse(savedStats);
+            if (savedHistory) {
+                historyLogs = JSON.parse(savedHistory);
+                updateHistoryUI();
+            }
+        }
+
+        function clearData() {
+            if(confirm("Are you sure you want to delete all historical logs and PnL?")) {
+                localStorage.removeItem('polyStats');
+                localStorage.removeItem('polyHistory');
+                stats = { netPnl: 0.0, totalTrades: 0, wins: 0, whipsaws: 0 };
+                historyLogs =[];
+                updateStatsUI();
+                updateHistoryUI();
+                logTerminal("System data purged by user.", "log-loss");
+            }
+        }
+
+        // Boot up
+        window.onload = init;
+
+    </script>
+</body>
+</html>
